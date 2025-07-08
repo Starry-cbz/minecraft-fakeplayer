@@ -1,0 +1,39 @@
+# 上游同步配置
+upstream:
+  # 上游仓库地址
+  repository: "tanyaofei/minecraft-fakeplayer"
+  # 上游分支
+  branch: "main"
+  # 本地分支
+  local_branch: "main"
+
+# 同步设置
+sync:
+  # 是否自动创建PR
+  create_pr: false
+  # 是否自动合并
+  auto_merge: true
+  # 冲突解决策略
+  conflict_resolution: "ours"
+  # 提交信息模板
+  commit_message: "chore: sync upstream changes from {upstream_repo}"
+
+# 构建设置
+build:
+  # 构建工具
+  tool: "maven"
+  # 构建命令
+  command: "mvn clean install"
+  # 是否在同步后自动构建
+  auto_build: true
+  # 构建超时时间（分钟）
+  timeout: 30
+
+# 通知设置
+notifications:
+  # 是否发送构建成功通知
+  success: true
+  # 是否发送构建失败通知
+  failure: true
+  # 通知渠道（可选：email, slack, webhook）
+  channels: [] 

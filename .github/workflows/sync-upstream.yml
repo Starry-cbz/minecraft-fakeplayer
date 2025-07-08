@@ -1,0 +1,53 @@
+name: Sync Upstream Repository
+
+on:
+  schedule:
+    # 每天凌晨2点运行
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    # 允许手动触发
+
+jobs:
+  sync-upstream:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Sync upstream repository
+        run: |
+          # 添加上游仓库
+          git remote add upstream https://github.com/tanyaofei/minecraft-fakeplayer.git
+          
+          # 获取上游更新
+          git fetch upstream
+          
+          # 检查是否有新的提交
+          if git rev-list HEAD..upstream/main --count > /dev/null 2>&1; then
+            echo "发现上游更新，开始同步..."
+            
+            # 切换到main分支
+            git checkout main
+            
+            # 合并上游更新
+            git merge upstream/main --no-edit
+            
+            # 推送更新到当前仓库
+            git push origin main
+            
+            echo "同步完成"
+          else
+            echo "没有发现新的上游更新"
+          fi
+
+      - name: Build after sync
+        if: success()
+        run: |
+          echo "开始构建项目..."
+          # 这里可以添加您的构建命令
+          # 例如: npm install && npm run build
+          # 或者: mvn clean install
+          # 根据您的项目类型调整 

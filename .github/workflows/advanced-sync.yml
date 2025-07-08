@@ -1,0 +1,104 @@
+name: Advanced Upstream Sync
+
+on:
+  schedule:
+    # 每天凌晨2点运行
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      force_sync:
+        description: '强制同步（即使没有更新）'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  sync-upstream:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Read sync configuration
+        id: config
+        run: |
+          # 读取配置文件
+          if [ -f ".github/upstream-sync.yml" ]; then
+            echo "读取同步配置..."
+            UPSTREAM_REPO=$(grep -A1 "repository:" .github/upstream-sync.yml | tail -1 | sed 's/.*"\(.*\)".*/\1/')
+            UPSTREAM_BRANCH=$(grep -A1 "branch:" .github/upstream-sync.yml | tail -1 | sed 's/.*"\(.*\)".*/\1/')
+            LOCAL_BRANCH=$(grep -A1 "local_branch:" .github/upstream-sync.yml | tail -1 | sed 's/.*"\(.*\)".*/\1/')
+            AUTO_MERGE=$(grep -A1 "auto_merge:" .github/upstream-sync.yml | tail -1 | sed 's/.*"\(.*\)".*/\1/')
+          else
+            # 默认配置
+            UPSTREAM_REPO="tanyaofei/minecraft-fakeplayer"
+            UPSTREAM_BRANCH="main"
+            LOCAL_BRANCH="main"
+            AUTO_MERGE="true"
+          fi
+          
+          echo "upstream_repo=$UPSTREAM_REPO" >> $GITHUB_OUTPUT
+          echo "upstream_branch=$UPSTREAM_BRANCH" >> $GITHUB_OUTPUT
+          echo "local_branch=$LOCAL_BRANCH" >> $GITHUB_OUTPUT
+          echo "auto_merge=$AUTO_MERGE" >> $GITHUB_OUTPUT
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Sync upstream repository
+        run: |
+          UPSTREAM_REPO="${{ steps.config.outputs.upstream_repo }}"
+          UPSTREAM_BRANCH="${{ steps.config.outputs.upstream_branch }}"
+          LOCAL_BRANCH="${{ steps.config.outputs.local_branch }}"
+          FORCE_SYNC="${{ github.event.inputs.force_sync }}"
+          
+          echo "开始同步上游仓库: $UPSTREAM_REPO"
+          
+          # 添加上游仓库
+          git remote add upstream https://github.com/$UPSTREAM_REPO.git
+          
+          # 获取上游更新
+          git fetch upstream
+          
+          # 检查是否有新的提交
+          COMMIT_COUNT=$(git rev-list HEAD..upstream/$UPSTREAM_BRANCH --count 2>/dev/null || echo "0")
+          
+          if [ "$COMMIT_COUNT" -gt 0 ] || [ "$FORCE_SYNC" = "true" ]; then
+            echo "发现 $COMMIT_COUNT 个新提交，开始同步..."
+            
+            # 切换到本地分支
+            git checkout $LOCAL_BRANCH
+            
+            # 合并上游更新
+            if git merge upstream/$UPSTREAM_BRANCH --no-edit; then
+              echo "合并成功"
+              
+              # 推送更新到当前仓库
+              if git push origin $LOCAL_BRANCH; then
+                echo "同步完成并推送到远程仓库"
+                echo "sync_success=true" >> $GITHUB_OUTPUT
+              else
+                echo "推送失败"
+                echo "sync_success=false" >> $GITHUB_OUTPUT
+                exit 1
+              fi
+            else
+              echo "合并失败，存在冲突"
+              echo "sync_success=false" >> $GITHUB_OUTPUT
+              exit 1
+            fi
+          else
+            echo "没有发现新的上游更新"
+            echo "sync_success=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Trigger build workflow
+        if: steps.sync-upstream.outputs.sync_success == 'true'
+        run: |
+          echo "触发构建工作流..."
+          # 这里可以添加触发其他工作流的逻辑 

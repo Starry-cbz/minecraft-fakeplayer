@@ -1,0 +1,141 @@
+name: Maven Multi-Module Build
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_run:
+    workflows: ["Sync Upstream Repository", "Advanced Upstream Sync"]
+    types:
+      - completed
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java-version: [17, 21]
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java ${{ matrix.java-version }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java-version }}
+          distribution: 'temurin'
+
+      - name: Cache Maven packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+
+      - name: Cache Maven wrapper
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2/wrapper
+          key: ${{ runner.os }}-maven-wrapper-${{ hashFiles('**/maven-wrapper.properties') }}
+          restore-keys: ${{ runner.os }}-maven-wrapper-
+
+      - name: Build with Maven
+        run: |
+          echo "开始构建多模块Maven项目..."
+          echo "Java版本: ${{ matrix.java-version }}"
+          
+          # 显示项目结构
+          mvn dependency:tree -DoutputFile=dependency-tree.txt
+          
+          # 清理并编译
+          mvn clean compile -B
+          
+          # 运行测试
+          mvn test -B
+          
+          # 打包
+          mvn package -B -DskipTests
+          
+          # 安装到本地仓库
+          mvn install -B -DskipTests
+          
+          echo "构建完成"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        if: success()
+        with:
+          name: build-artifacts-java-${{ matrix.java-version }}
+          path: |
+            */target/*.jar
+            */target/*.war
+            */target/classes/
+            dependency-tree.txt
+          retention-days: 30
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test-results-java-${{ matrix.java-version }}
+          path: |
+            */target/surefire-reports/
+            */target/failsafe-reports/
+          retention-days: 7
+
+      - name: Create Release (Java 17 only)
+        if: matrix.java-version == 17 && github.ref == 'refs/heads/main' && success()
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ github.run_number }}
+          release_name: Release v${{ github.run_number }}
+          body: |
+            ## 自动构建发布
+            
+            **构建信息:**
+            - 构建时间: ${{ github.event.head_commit.timestamp }}
+            - 提交: ${{ github.sha }}
+            - Java版本: ${{ matrix.java-version }}
+            
+            **构建产物:**
+            - 所有模块的JAR文件
+            - 依赖树文件
+            
+            **测试结果:**
+            - 查看Actions页面获取详细测试报告
+          draft: false
+          prerelease: false
+
+  security-scan:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Run OWASP Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: 'minecraft-fakeplayer'
+          path: '.'
+          format: 'HTML'
+          out: 'reports'
+
+      - name: Upload security report
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-report
+          path: reports/
+          retention-days: 30 

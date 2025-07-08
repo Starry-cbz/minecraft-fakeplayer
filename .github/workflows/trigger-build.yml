@@ -1,0 +1,53 @@
+name: Trigger Build After Sync
+
+on:
+  workflow_run:
+    workflows: ["Sync Upstream Repository", "Advanced Upstream Sync"]
+    types:
+      - completed
+
+jobs:
+  trigger-build:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    
+    steps:
+      - name: Trigger Maven Build
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: runs } = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'maven-build.yml',
+              branch: 'main'
+            });
+            
+            // 检查是否已经有最近的构建运行
+            const recentRun = runs.workflow_runs[0];
+            const now = new Date();
+            const runTime = new Date(recentRun.created_at);
+            const timeDiff = now - runTime;
+            
+            // 如果最近的构建运行在5分钟内，则不触发新的构建
+            if (timeDiff < 5 * 60 * 1000) {
+              console.log('最近的构建运行在5分钟内，跳过触发');
+              return;
+            }
+            
+            // 触发构建工作流
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'maven-build.yml',
+              ref: 'main'
+            });
+            
+            console.log('已触发Maven构建工作流');
+
+      - name: Notify sync completion
+        run: |
+          echo "上游同步已完成，构建工作流已触发"
+          echo "同步时间: $(date)"
+          echo "仓库: ${{ github.repository }}"
+          echo "分支: main" 
