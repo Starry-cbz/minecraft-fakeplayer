@@ -83,6 +83,7 @@
             <version>SNAPSHOT</version>
             <scope>system</scope>
             <systemPath>${project.basedir}/../lib/OpenInv.jar</systemPath>
+            <optional>true</optional>
         </dependency>
 
         <dependency>
@@ -91,6 +92,7 @@
             <version>SNAPSHOT</version>
             <scope>system</scope>
             <systemPath>${project.basedir}/../lib/PlaceholderAPI-2.11.6.jar</systemPath>
+            <optional>true</optional>
         </dependency>
 
     </dependencies>

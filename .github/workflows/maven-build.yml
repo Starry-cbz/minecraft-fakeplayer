@@ -72,19 +72,19 @@ jobs:
           echo "Java版本: ${{ matrix.java-version }}"
           
           # 显示项目结构
-          mvn dependency:tree -DoutputFile=dependency-tree.txt -pl '!fakeplayer-core'
+          mvn dependency:tree -DoutputFile=dependency-tree.txt
           
-          # 清理并编译（跳过fakeplayer-core模块）
-          mvn clean compile -B -pl '!fakeplayer-core'
+          # 清理并编译
+          mvn clean compile -B
           
-          # 运行测试（跳过fakeplayer-core模块）
-          mvn test -B -pl '!fakeplayer-core'
+          # 运行测试
+          mvn test -B
           
-          # 打包（跳过fakeplayer-core模块）
-          mvn package -B -DskipTests -pl '!fakeplayer-core'
+          # 打包
+          mvn package -B -DskipTests
           
-          # 安装到本地仓库（跳过fakeplayer-core模块）
-          mvn install -B -DskipTests -pl '!fakeplayer-core'
+          # 安装到本地仓库
+          mvn install -B -DskipTests
           
           echo "构建完成"
 
