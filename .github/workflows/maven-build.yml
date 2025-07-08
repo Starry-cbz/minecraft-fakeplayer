@@ -64,7 +64,7 @@ jobs:
           echo "构建完成"
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: success()
         with:
           name: build-artifacts-java-${{ matrix.java-version }}
@@ -76,7 +76,7 @@ jobs:
           retention-days: 30
 
       - name: Upload test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: test-results-java-${{ matrix.java-version }}
@@ -134,7 +134,7 @@ jobs:
           out: 'reports'
 
       - name: Upload security report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: security-report
           path: reports/
