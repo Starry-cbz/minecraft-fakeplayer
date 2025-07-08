@@ -41,30 +41,17 @@ jobs:
           key: ${{ runner.os }}-maven-wrapper-${{ hashFiles('**/maven-wrapper.properties') }}
           restore-keys: ${{ runner.os }}-maven-wrapper-
 
-      - name: Download missing dependencies
+      - name: Download system dependencies
         run: |
-          echo "检查并下载缺失的依赖..."
-          
-          # 创建lib目录
           mkdir -p lib
-          
-          # 下载PlaceholderAPI（如果不存在）
+          # 下载 PlaceholderAPI
           if [ ! -f "lib/PlaceholderAPI-2.11.6.jar" ]; then
-            echo "下载PlaceholderAPI-2.11.6.jar..."
-            # 这里可以添加实际的下载URL
-            # wget -O lib/PlaceholderAPI-2.11.6.jar "https://github.com/PlaceholderAPI/PlaceholderAPI/releases/download/2.11.6/PlaceholderAPI-2.11.6.jar"
-            echo "PlaceholderAPI下载功能待实现"
+            wget -O lib/PlaceholderAPI-2.11.6.jar "https://github.com/PlaceholderAPI/PlaceholderAPI/releases/download/2.11.6/PlaceholderAPI-2.11.6.jar"
           fi
-          
-          # 下载OpenInv（如果不存在）
+          # 下载 OpenInv
           if [ ! -f "lib/OpenInv.jar" ]; then
-            echo "下载OpenInv.jar..."
-            # 这里可以添加实际的下载URL
-            # wget -O lib/OpenInv.jar "https://github.com/OpenInv/OpenInv/releases/download/1.4.4/OpenInv.jar"
-            echo "OpenInv下载功能待实现"
+            wget -O lib/OpenInv.jar "https://github.com/lishid/OpenInv/releases/download/4.2.2/OpenInv.jar"
           fi
-          
-          echo "依赖检查完成"
 
       - name: Build with Maven
         run: |

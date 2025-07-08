@@ -30,6 +30,18 @@ jobs:
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
 
+      - name: Download system dependencies
+        run: |
+          mkdir -p lib
+          # 下载 PlaceholderAPI
+          if [ ! -f "lib/PlaceholderAPI-2.11.6.jar" ]; then
+            wget -O lib/PlaceholderAPI-2.11.6.jar "https://github.com/PlaceholderAPI/PlaceholderAPI/releases/download/2.11.6/PlaceholderAPI-2.11.6.jar"
+          fi
+          # 下载 OpenInv
+          if [ ! -f "lib/OpenInv.jar" ]; then
+            wget -O lib/OpenInv.jar "https://github.com/lishid/OpenInv/releases/download/4.2.2/OpenInv.jar"
+          fi
+
       - name: Build with Maven
         run: |
           echo "开始构建项目..."
